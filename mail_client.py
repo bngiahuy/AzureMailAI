@@ -7,7 +7,8 @@ from msgraph.generated.models.message import Message
 from html_to_markdown import convert_to_markdown
 import unicodedata
 import re
-
+from msgraph.generated.users.item.mail_folders.item.messages.messages_request_builder import (
+                MessagesRequestBuilder)
 logger = logging.getLogger(__name__)
 
 
@@ -69,7 +70,10 @@ class MailClient:
 
         all_messages: List[Message] = []
         try:
-            response = await request.get()
+            config = MessagesRequestBuilder.MessagesRequestBuilderGetRequestConfiguration()
+            # Add headers to the configuration, to specify the response format
+            config.headers.add("Prefer", "outlook.body-content-type='text'")
+            response = await request.get(request_configuration=config)
             if not response or not response.value:
                 logger.info("No messages found.")
                 return all_messages
@@ -109,14 +113,15 @@ class MailClient:
             logger.warning("Message body is empty.")
             return None
 
-        # Because the body content is sometime HTML, we need to convert it to Markdown for easier processing
-        latest_msg_body_raw = convert_to_markdown(
-            latest_msg.body.content,
-            parser="lxml",
-            extract_metadata=False,
-            strip_newlines=True,
-        )
-        latest_msg_body_clean = self.clean_markdown(latest_msg_body_raw)
+        # Because the body content is sometime HTML, we need to convert it to Markdown for easier processing. But if we add the header "Prefer: outlook.body-content-type='text'", the body content will be plain text, which means we can skip the conversion.
+        # Uncomment the following lines to enable conversion
+        # latest_msg_body_raw = convert_to_markdown(
+        #     latest_msg.body.content,
+        #     parser="lxml",
+        #     extract_metadata=False,
+        #     strip_newlines=True,
+        # )
+        # latest_msg_body_clean = self.clean_markdown(latest_msg_body_raw)
 
         # Check sender information
         sender_address = "Unknown"
@@ -136,6 +141,9 @@ class MailClient:
             f"From: {sender_address}.\n"
             f"Subject: {subject}.\n"
             f"Date: {date_str}.\n"
-            f"Body: {latest_msg_body_clean}.\n"
+            f"Body: {latest_msg.body.content}.\n"
+            # f"Body: {latest_msg_body_clean}.\n"
         )
+
+        logger.info(f"Mail Information:\n{mail_info}\n")
         return mail_info

@@ -17,35 +17,47 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
+# async def test_llm():
+# with timer():
+#     mail_client = MailClient(credential, Config.GRAPH_SCOPES)
+#     llm_client = LLMClient(Config.GEMINI_API_KEY)
+#     user_email_address = "huy.bui47@bngiahuy.onmicrosoft.com"
+#     # Fetch messages
+#     messages = await mail_client.get_user_messages(user_email_address)
+#     if not messages:
+#         logging.info("No messages found.")
+#         return
+
+#     # Process latest message
+#     mail_info = mail_client.process_latest_message(messages)
+#     if not mail_info:
+#         logging.info("No mail info to process.")
+#         return
+
+#     # Invoke LLM for summarization
+#     summary = llm_client.invoke_llm(mail_info)
+#     if summary:
+#         print(summary)
+#     else:
+#         logging.error("Failed to generate summary.")
+
+
 async def test_users(credential):
-    # with timer():
-    #     mail_client = MailClient(credential, Config.GRAPH_SCOPES)
-    #     llm_client = LLMClient(Config.GEMINI_API_KEY)
-    #     user_email_address = "huy.bui47@bngiahuy.onmicrosoft.com"
-    #     # Fetch messages
-    #     messages = await mail_client.get_user_messages(user_email_address)
-    #     if not messages:
-    #         logging.info("No messages found.")
-    #         return
-
-    #     # Process latest message
-    #     mail_info = mail_client.process_latest_message(messages)
-    #     if not mail_info:
-    #         logging.info("No mail info to process.")
-    #         return
-
-    #     # Invoke LLM for summarization
-    #     summary = llm_client.invoke_llm(mail_info)
-    #     if summary:
-    #         print(summary)
-    #     else:
-    #         logging.error("Failed to generate summary.")
-
     users_manager = Users(credential, Config.GRAPH_SCOPES)
 
-    # Find a specific user by email
+    # List all users
     user = await users_manager.get_users()
     logger.info(f"User Details: {user}")
+
+    # Get user planner tasks
+    user_id = "b5337e23-45a1-4cd1-8da2-98725636ca47"  # huy.bui... userId
+    tasks = await users_manager.get_user_planner_tasks(user_id=user_id)
+    for task in tasks:
+        logger.info(
+            f"\nID: {task.id}\nTask: {task.title}\nStart Date: {task.start_date_time}\nDue Date: {task.due_date_time}\n"
+            f"Status: {task.percent_complete}\nPriority: {task.priority}\nAssignee Priority: {task.assignee_priority}\n"
+            f"Completed: {task.completed_date_time}\nCreated: {task.created_date_time}\n"
+        )
 
 
 async def test_create_task(credential):
@@ -123,13 +135,13 @@ async def main():
         groups_manager = Groups(credential, Config.GRAPH_SCOPES)
 
         # Test user-related operations
-        # await test_users(credential)
+        await test_users(credential)
 
         # Test create task in Planner
         # await test_create_task(credential)
 
         # Test bucket list
-        await test_bucket_list(groups_manager)
+        # await test_bucket_list(groups_manager)
 
     except Exception as e:
         logging.error(f"An error occurred: {e}")

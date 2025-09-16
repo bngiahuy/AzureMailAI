@@ -11,6 +11,30 @@ class Groups:
     def __init__(self, credential, scopes):
         self.client = GraphServiceClient(credentials=credential, scopes=scopes)
 
+    async def list_buckets_by_plan(self, plan_id: str):
+        """
+        List all buckets in a specific Planner plan.
+
+        Microsoft Docs:
+        - List buckets: https://learn.microsoft.com/en-us/graph/api/planner-list-buckets?view=graph-rest-1.0
+
+        API Permissions (Delegated):
+        - Tasks.Read
+        - Tasks.ReadWrite
+
+        Args:
+            plan_id (str): ID of the plan whose buckets to list.
+
+        Returns:
+            List of PlannerBucket objects, or empty list if none/error.
+        """
+        try:
+            buckets = await self.client.planner.plans.by_planner_plan_id(plan_id).buckets.get()
+            return buckets.value if buckets else []
+        except Exception as e:
+            logger.error(f"Error listing buckets: {e}")
+            return []
+        
     async def create_task(self, plan_id: str, title: str, assignments, due_date: str = None, **kwargs):
         """
         Create a new Planner task in a plan.

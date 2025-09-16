@@ -7,7 +7,6 @@ from llm_client import LLMClient
 from utils import timer
 from users_manager import Users
 from groups_manager import Groups
-from planner_manager import Planner
 # Configure logging
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
@@ -61,40 +60,45 @@ async def main():
         # Groups manager
         groups_manager = Groups(credential, Config.GRAPH_SCOPES)
 
-        # List all groups
+        # 1. List all groups and pick the target group
         groups = await groups_manager.list_groups()
         print(f"Groups: {groups}")
         for group in groups:
             print(f"Group: {group.display_name}, ID: {group.id}")
 
-        # I chose a specific group to work with
-        # group_id = "7a37cd5a-29d3-4960...", name = "The Perspective Team"
-        group_plans = await groups_manager.list_plans(group_id="7a37cd5a-29d3-4960-89be-bb489ab6ef7b")
-        print(f"Plans: {group_plans}")
+        # Use the specific group ID for the workflow
+        group_id = "7a37cd5a-29d3-4960-89be-bb489ab6ef7b" # The Perspective Team
 
-        # List tasks in a specific plan
-        tasks = await groups_manager.list_tasks_by_plan(group_id="7a37cd5a-29d3-4960-89be-bb489ab6ef7b", plan_id=group_plans[0].id)
-        print(f"List tasks in Plan: {tasks}")
-        
-        # Create a new task in a specific plan
+        # 2. List all plans in the group
+        group_plans = await groups_manager.list_plans(group_id=group_id)
+        print(f"Plans: {group_plans}")
+        if not group_plans:
+            print("No plans found for the group.")
+            return
+        plan_id = group_plans[0].id
+
+        # 3. Create a new task in the plan and assign to user
+        user_id = "b5337e23-45a1-4cd1-8da2-98725636ca47" # huy.bui... userId
         from msgraph.generated.models.planner_assignments import PlannerAssignments
-        new_task_assignment = PlannerAssignments(
-            odata_type="microsoft.graph.plannerAssignments",
+        assignments = PlannerAssignments(
             additional_data={
-                "b5337e23-45a1-4cd1-8da2-98725636ca47": { # huy.bui... userId
+                user_id: {
                     "@odata.type": "microsoft.graph.plannerAssignment",
                     "orderHint": " !"
                 }
             }
         )
         new_task = await groups_manager.create_task(
-            # group_id="7a37cd5a-29d3-4960-89be-bb489ab6ef7b",
-            plan_id=group_plans[0].id,
-            title="My New Task from SDK #5",
-            assignments=new_task_assignment,
-            due_date="2025-10-20T07:00:00Z"
+            plan_id=plan_id,
+            title="My New Task from SDK Huy",
+            assignments=assignments,
+            due_date="2025-10-21T07:00:00Z"
         )
         print(f"New Task: {new_task}")
+
+        # 4. List all tasks in the plan to verify
+        tasks = await groups_manager.list_tasks_by_plan(group_id=group_id, plan_id=plan_id)
+        print(f"List tasks in Plan after creation: {tasks}")
 
     except Exception as e:
         logging.error(f"An error occurred: {e}")
